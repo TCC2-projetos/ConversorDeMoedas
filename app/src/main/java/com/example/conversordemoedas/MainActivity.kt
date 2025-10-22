@@ -1,6 +1,7 @@
 package com.example.conversordemoedas
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -28,6 +29,7 @@ import androidx.compose.material3.MenuAnchorType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import androidx.core.content.edit
 
 // Interface para a API (igual ao aula anterior)
 interface CurrencyApiService {
@@ -136,9 +138,8 @@ fun CurrencyConverterScreen(apiKey: String) {
                             val updatedHistory = (listOf(historyEntry) + history).take(5)
                             history = updatedHistory
 
-                            with(sharedPrefs.edit()) {
+                            sharedPrefs.edit {
                                 putStringSet("history", updatedHistory.toSet())
-                                apply()
                             }
                         },
                         onError = { error ->
@@ -167,14 +168,35 @@ fun CurrencyConverterScreen(apiKey: String) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text("Histórico:", fontSize = 18.sp)
-            Button(onClick = {
-                history = emptyList()
-                with(sharedPrefs.edit()) {
-                    putStringSet("history", emptySet())
-                    apply()
+            Row {
+                Button(onClick = {
+                    if (history.isNotEmpty()) {
+                        val sendIntent: Intent = Intent().apply {
+                            action = Intent.ACTION_SEND
+                            putExtra(Intent.EXTRA_TEXT, "Minhas últimas conversões:\n\n" + history.joinToString("\n"))
+                            type = "text/plain"
+                        }
+                        val shareIntent = Intent.createChooser(sendIntent, "Compartilhar Histórico")
+                        context.startActivity(shareIntent)
+                    } else {
+                        Toast.makeText(context, "Histórico está vazio.", Toast.LENGTH_SHORT).show()
+                    }
+                }) {
+                    Text("Compartilhar")
                 }
-            }) {
-                Text("Limpar Histórico")
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
+                    // 1. Limpa a lista que está na memória (para a UI atualizar)
+                    history = emptyList()
+
+                    // 2. Limpa a lista que está salva no armazenamento
+                    sharedPrefs.edit {
+                        // Opção A: Remove a chave completamente. É o mais limpo.
+                        remove("history")
+                    }
+                }) {
+                    Text(text = "Limpar")
+                }
             }
         }
 
