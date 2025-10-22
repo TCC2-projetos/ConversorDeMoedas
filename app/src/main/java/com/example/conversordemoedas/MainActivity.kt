@@ -31,7 +31,7 @@ import java.util.Date
 import java.util.Locale
 import androidx.core.content.edit
 
-// Interface para a API (igual a aula anterior)
+// Interface para a API (igual ao feito nas aulas )
 interface CurrencyApiService {
     @GET("v6/{apiKey}/latest/{baseCurrency}")
     fun getExchangeRates(
