@@ -24,7 +24,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
 
-// Interface para a API (igual ao guia anterior)
+// Interface para a API (igual ao aula anterior)
 interface CurrencyApiService {
     @GET("v6/{apiKey}/latest/{baseCurrency}")
     fun getExchangeRates(
@@ -34,7 +34,7 @@ interface CurrencyApiService {
 }
 
 class MainActivity : ComponentActivity() {
-    // Substitua "SUA_CHAVE_DE_API" pela chave que você obteve
+    // Substitua "SUA_CHAVE_DE_API" pela chave obetida no site da ExchangeRate-API
     private val apiKey = "5cc45da295ed4917dd7a8f2c"
 
     override fun onCreate(savedInstanceState: Bundle?) {
