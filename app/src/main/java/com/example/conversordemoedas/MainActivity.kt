@@ -1,5 +1,6 @@
 package com.example.conversordemoedas
 
+import android.content.Context
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -23,6 +24,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
+import androidx.compose.material3.MenuAnchorType
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 // Interface para a API (igual ao aula anterior)
 interface CurrencyApiService {
@@ -35,7 +40,7 @@ interface CurrencyApiService {
 
 class MainActivity : ComponentActivity() {
     // Substitua "SUA_CHAVE_DE_API" pela chave obetida no site da ExchangeRate-API
-    private val apiKey = "666da295ed4917dd7a8f2c"
+    private val apiKey = "5cc45da295ed4917dd7a8f2c"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,8 +66,15 @@ fun CurrencyConverterScreen(apiKey: String) {
     var toCurrency by remember { mutableStateOf("BRL") }
     var result by remember { mutableStateOf("Resultado") }
 
-    val currencies = listOf("USD", "EUR", "BRL", "JPY", "GBP")
     val context = LocalContext.current
+    val sharedPrefs = remember { context.getSharedPreferences("conversion_history", Context.MODE_PRIVATE) }
+
+    var history by remember {
+        val savedHistory = sharedPrefs.getStringSet("history", emptySet())?.toList() ?: emptyList()
+        mutableStateOf(savedHistory)
+    }
+
+    val currencies = listOf("USD", "EUR", "BRL", "JPY", "GBP")
 
     Column(
         modifier = Modifier
@@ -110,9 +122,29 @@ fun CurrencyConverterScreen(apiKey: String) {
             onClick = {
                 if (amount.isNotEmpty()) {
                     // Lógica da API é chamada aqui
-                    getConversionRate(apiKey, amount, fromCurrency, toCurrency) { newResult ->
-                        result = newResult
-                    }
+                    getConversionRate(
+                        apiKey = apiKey,
+                        amountStr = amount,
+                        fromCurrency = fromCurrency,
+                        toCurrency = toCurrency,
+                        onSuccess = { newResult ->
+                            result = newResult
+                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+                            val currentDate = sdf.format(Date())
+                            val historyEntry = "$currentDate: $newResult"
+
+                            val updatedHistory = (listOf(historyEntry) + history).take(5)
+                            history = updatedHistory
+
+                            with(sharedPrefs.edit()) {
+                                putStringSet("history", updatedHistory.toSet())
+                                apply()
+                            }
+                        },
+                        onError = { error ->
+                            result = error
+                        }
+                    )
                 } else {
                     Toast.makeText(context, "Por favor, insira um valor", Toast.LENGTH_SHORT).show()
                 }
@@ -126,6 +158,32 @@ fun CurrencyConverterScreen(apiKey: String) {
 
         // Texto para exibir o resultado
         Text(text = result, fontSize = 24.sp)
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text("Histórico:", fontSize = 18.sp)
+            Button(onClick = {
+                history = emptyList()
+                with(sharedPrefs.edit()) {
+                    putStringSet("history", emptySet())
+                    apply()
+                }
+            }) {
+                Text("Limpar Histórico")
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        Column {
+            history.forEach { item ->
+                Text(item)
+            }
+        }
     }
 }
 
@@ -149,7 +207,7 @@ fun CurrencyDropdown(
             onValueChange = {},
             readOnly = true,
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor()
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable)
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -173,9 +231,14 @@ private fun getConversionRate(
     amountStr: String,
     fromCurrency: String,
     toCurrency: String,
-    onResult: (String) -> Unit
+    onSuccess: (String) -> Unit,
+    onError: (String) -> Unit
 ) {
-    val amount = amountStr.toDouble()
+    val amount = amountStr.toDoubleOrNull()
+    if (amount == null) {
+        onError("Valor inválido")
+        return
+    }
 
     val retrofit = Retrofit.Builder()
         .baseUrl("https://v6.exchangerate-api.com/")
@@ -192,17 +255,17 @@ private fun getConversionRate(
                 val rate = rates?.get(toCurrency)?.asDouble
                 if (rate != null) {
                     val result = amount * rate
-                    onResult(String.format("%.2f %s = %.2f %s", amount, fromCurrency, result, toCurrency))
+                    onSuccess(String.format(Locale.US, "%.2f %s = %.2f %s", amount, fromCurrency, result, toCurrency))
                 } else {
-                    onResult("Erro ao obter a taxa de conversão.")
+                    onError("Erro ao obter a taxa de conversão.")
                 }
             } else {
-                onResult("Erro na resposta da API.")
+                onError("Erro na resposta da API.")
             }
         }
 
         override fun onFailure(call: Call<JsonObject>, t: Throwable) {
-            onResult("Falha na conexão: ${t.message}")
+            onError("Falha na conexão: ${t.message}")
         }
     })
 }

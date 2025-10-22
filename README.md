@@ -2,6 +2,8 @@
 
 ## Sobre o Projeto
 
+Esse é um fork feito para o TCC do Kaio, Frankarllyson e Samuel, do projeto original disponível em: [https://github.com/MichelZero/ConversorDeMoedas.git]
+
 Este é um aplicativo Android de conversor de moedas desenvolvido como um projeto para fins acadêmicos. A principal funcionalidade do aplicativo é permitir que os usuários convertam valores entre diferentes moedas, utilizando taxas de câmbio atualizadas.
 
 O aplicativo é construído com tecnologias modernas de desenvolvimento Android, incluindo:
