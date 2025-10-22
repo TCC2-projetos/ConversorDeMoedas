@@ -35,7 +35,7 @@ interface CurrencyApiService {
 
 class MainActivity : ComponentActivity() {
     // Substitua "SUA_CHAVE_DE_API" pela chave obetida no site da ExchangeRate-API
-    private val apiKey = "da295ed4917dd7a8f2c"
+    private val apiKey = "6da295ed4917dd7a8f2c"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
