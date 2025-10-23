@@ -25,13 +25,14 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import retrofit2.http.Path
-import androidx.compose.material3.MenuAnchorType
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.core.content.edit
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 
-// Interface para a API (igual ao feito nas aulas )
+
+// Interface para a API
 interface CurrencyApiService {
     @GET("v6/{apiKey}/latest/{baseCurrency}")
     fun getExchangeRates(
@@ -41,18 +42,36 @@ interface CurrencyApiService {
 }
 
 class MainActivity : ComponentActivity() {
-    // Substitua "SUA_CHAVE_DE_API" pela chave obtida no site da ExchangeRate-API
     private val apiKey = "5cc45da295ed4917dd7a8f2c"
 
+    @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             ConversorDeMoedasTheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    CurrencyConverterScreen(apiKey = apiKey)
+                Scaffold(
+                    topBar = {
+                        TopAppBar(
+                            title = { Text("Conversor de Moedas") },
+                            actions = {
+                                val context = LocalContext.current
+                                IconButton(onClick = {
+                                    context.startActivity(Intent(context, AboutActivity::class.java))
+                                }) {
+                                    Icon(Icons.Default.Info, contentDescription = "Sobre")
+                                }
+                            }
+                        )
+                    }
+                ) { innerPadding ->
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding),
+                        color = MaterialTheme.colorScheme.background
+                    ) {
+                        CurrencyConverterScreen(apiKey = apiKey)
+                    }
                 }
             }
         }
@@ -62,7 +81,6 @@ class MainActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CurrencyConverterScreen(apiKey: String) {
-    // Estados para armazenar os valores da UI
     var amount by remember { mutableStateOf("") }
     var fromCurrency by remember { mutableStateOf("USD") }
     var toCurrency by remember { mutableStateOf("BRL") }
@@ -71,8 +89,10 @@ fun CurrencyConverterScreen(apiKey: String) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("conversion_history", Context.MODE_PRIVATE) }
 
+    // Carrega o histórico garantindo a ordem
     var history by remember {
-        val savedHistory = sharedPrefs.getStringSet("history", emptySet())?.toList() ?: emptyList()
+        val savedHistoryString = sharedPrefs.getString("history_list", null)
+        val savedHistory = savedHistoryString?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
         mutableStateOf(savedHistory)
     }
 
@@ -85,7 +105,12 @@ fun CurrencyConverterScreen(apiKey: String) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Campo para inserir o valor
+        Text(
+            text = "Guia Rápido:\n1. Insira o valor.\n2. Selecione as moedas.\n3. Clique em 'Converter'.",
+            fontSize = 16.sp,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
         OutlinedTextField(
             value = amount,
             onValueChange = { amount = it },
@@ -96,39 +121,23 @@ fun CurrencyConverterScreen(apiKey: String) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Spinners para selecionar as moedas
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceAround
         ) {
-            CurrencyDropdown(
-                selectedCurrency = fromCurrency,
-                onCurrencyChange = { fromCurrency = it },
-                currencies = currencies,
-                modifier = Modifier.weight(1f)
-            )
+            CurrencyDropdown(selectedCurrency = fromCurrency, onCurrencyChange = { fromCurrency = it }, currencies = currencies, modifier = Modifier.weight(1f))
             Text("para", modifier = Modifier.padding(horizontal = 8.dp))
-            CurrencyDropdown(
-                selectedCurrency = toCurrency,
-                onCurrencyChange = { toCurrency = it },
-                currencies = currencies,
-                modifier = Modifier.weight(1f)
-            )
+            CurrencyDropdown(selectedCurrency = toCurrency, onCurrencyChange = { toCurrency = it }, currencies = currencies, modifier = Modifier.weight(1f))
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botão para converter
         Button(
             onClick = {
                 if (amount.isNotEmpty()) {
-                    // Lógica da API é chamada aqui
                     getConversionRate(
-                        apiKey = apiKey,
-                        amountStr = amount,
-                        fromCurrency = fromCurrency,
-                        toCurrency = toCurrency,
+                        apiKey = apiKey, amountStr = amount, fromCurrency = fromCurrency, toCurrency = toCurrency,
                         onSuccess = { newResult ->
                             result = newResult
                             val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
@@ -138,13 +147,10 @@ fun CurrencyConverterScreen(apiKey: String) {
                             val updatedHistory = (listOf(historyEntry) + history).take(5)
                             history = updatedHistory
 
-                            sharedPrefs.edit {
-                                putStringSet("history", updatedHistory.toSet())
-                            }
+                            // Salva o histórico como uma única String para manter a ordem
+                            sharedPrefs.edit().putString("history_list", updatedHistory.joinToString("\n")).apply()
                         },
-                        onError = { error ->
-                            result = error
-                        }
+                        onError = { error -> result = error }
                     )
                 } else {
                     Toast.makeText(context, "Por favor, insira um valor", Toast.LENGTH_SHORT).show()
@@ -157,7 +163,6 @@ fun CurrencyConverterScreen(apiKey: String) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Texto para exibir o resultado
         Text(text = result, fontSize = 24.sp)
 
         Spacer(modifier = Modifier.height(32.dp))
@@ -171,7 +176,7 @@ fun CurrencyConverterScreen(apiKey: String) {
             Row {
                 Button(onClick = {
                     if (history.isNotEmpty()) {
-                        val sendIntent: Intent = Intent().apply {
+                        val sendIntent = Intent().apply {
                             action = Intent.ACTION_SEND
                             putExtra(Intent.EXTRA_TEXT, "Minhas últimas conversões:\n\n" + history.joinToString("\n"))
                             type = "text/plain"
@@ -186,14 +191,8 @@ fun CurrencyConverterScreen(apiKey: String) {
                 }
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = {
-                    // 1. Limpa a lista que está na memória (para a UI atualizar)
                     history = emptyList()
-
-                    // 2. Limpa a lista que está salva no armazenamento
-                    sharedPrefs.edit {
-                        // Opção A: Remove a chave completamente. É o mais limpo.
-                        remove("history")
-                    }
+                    sharedPrefs.edit().remove("history_list").apply()
                 }) {
                     Text(text = "Limpar")
                 }
@@ -225,11 +224,11 @@ fun CurrencyDropdown(
         modifier = modifier
     ) {
         TextField(
+            modifier = Modifier.menuAnchor(),
             value = selectedCurrency,
             onValueChange = {},
             readOnly = true,
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryEditable)
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
         )
         ExposedDropdownMenu(
             expanded = expanded,
@@ -241,7 +240,8 @@ fun CurrencyDropdown(
                     onClick = {
                         onCurrencyChange(currency)
                         expanded = false
-                    }
+                    },
+                    contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
                 )
             }
         }
