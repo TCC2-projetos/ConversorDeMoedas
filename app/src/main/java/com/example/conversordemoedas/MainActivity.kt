@@ -7,7 +7,11 @@ import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -28,9 +32,8 @@ import retrofit2.http.Path
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-
+import androidx.core.content.edit
+import androidx.compose.material3.MenuAnchorType
 
 // Interface para a API
 interface CurrencyApiService {
@@ -61,7 +64,7 @@ class MainActivity : ComponentActivity() {
                                     Icon(
                                         Icons.Default.Info,
                                         contentDescription = "Sobre",
-                                        modifier = Modifier.size(32.dp) // Aumentado em ~30%
+                                        modifier = Modifier.size(32.dp)
                                     )
                                 }
                             }
@@ -93,7 +96,6 @@ fun CurrencyConverterScreen(apiKey: String) {
     val context = LocalContext.current
     val sharedPrefs = remember { context.getSharedPreferences("conversion_history", Context.MODE_PRIVATE) }
 
-    // Carrega o histórico garantindo a ordem
     var history by remember {
         val savedHistoryString = sharedPrefs.getString("history_list", null)
         val savedHistory = savedHistoryString?.split("\n")?.filter { it.isNotBlank() } ?: emptyList()
@@ -151,10 +153,16 @@ fun CurrencyConverterScreen(apiKey: String) {
                             val updatedHistory = (listOf(historyEntry) + history).take(5)
                             history = updatedHistory
 
-                            // Salva o histórico como uma única String para manter a ordem
-                            sharedPrefs.edit().putString("history_list", updatedHistory.joinToString("\n")).apply()
+                            sharedPrefs.edit {
+                                putString(
+                                    "history_list",
+                                    updatedHistory.joinToString("\n")
+                                )
+                            }
                         },
-                        onError = { error -> result = error }
+                        onError = { error ->
+                            result = error
+                        }
                     )
                 } else {
                     Toast.makeText(context, "Por favor, insira um valor", Toast.LENGTH_SHORT).show()
@@ -196,7 +204,7 @@ fun CurrencyConverterScreen(apiKey: String) {
                 Spacer(modifier = Modifier.width(8.dp))
                 Button(onClick = {
                     history = emptyList()
-                    sharedPrefs.edit().remove("history_list").apply()
+                    sharedPrefs.edit { remove("history_list") }
                 }) {
                     Text(text = "Limpar")
                 }
@@ -204,13 +212,15 @@ fun CurrencyConverterScreen(apiKey: String) {
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        Column {
-            history.forEach { item ->
-                Text(item)
+
+        LazyColumn(modifier = Modifier.fillMaxHeight()) {
+            items(history) { item ->
+                Text(item, modifier = Modifier.padding(vertical = 4.dp))
             }
         }
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -228,7 +238,7 @@ fun CurrencyDropdown(
         modifier = modifier
     ) {
         TextField(
-            modifier = Modifier.menuAnchor(),
+            modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable),
             value = selectedCurrency,
             onValueChange = {},
             readOnly = true,
