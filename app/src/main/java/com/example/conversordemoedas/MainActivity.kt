@@ -58,7 +58,11 @@ class MainActivity : ComponentActivity() {
                                 IconButton(onClick = {
                                     context.startActivity(Intent(context, AboutActivity::class.java))
                                 }) {
-                                    Icon(Icons.Default.Info, contentDescription = "Sobre")
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = "Sobre",
+                                        modifier = Modifier.size(32.dp) // Aumentado em ~30%
+                                    )
                                 }
                             }
                         )

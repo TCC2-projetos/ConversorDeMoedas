@@ -52,11 +52,12 @@ fun AboutScreenContent(onBackClick: () -> Unit) {
         verticalArrangement = Arrangement.Center
     ) {
         Text("Autores do App", fontSize = 22.sp, modifier = Modifier.padding(bottom = 16.dp))
-        Text("Kaio", fontSize = 18.sp)
-        Text("Fhrankalison", fontSize = 18.sp)
-        Text("Samuel", fontSize = 18.sp)
-        Text("Andre", fontSize = 18.sp)
-        Text("Michel", fontSize = 18.sp)
+        Text("TCC do INTIN IFPB/CZ:", fontSize = 22.sp, modifier = Modifier.padding(bottom = 16.dp))
+        Text("José Frankarllyson", fontSize = 18.sp)
+        Text("Kaio Gabriel", fontSize = 18.sp)
+        Text("Samuel Lins ", fontSize = 18.sp)
+        Text("Orientador: Andre de Paula R. G. Luz", fontSize = 18.sp)
+        Text("Coorientador:  Michel Silva", fontSize = 18.sp)
         Spacer(modifier = Modifier.height(32.dp))
         Button(onClick = onBackClick) {
             Text("Voltar")
