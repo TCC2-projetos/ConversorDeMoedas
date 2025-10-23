@@ -45,7 +45,7 @@ interface CurrencyApiService {
 }
 
 class MainActivity : ComponentActivity() {
-    private val apiKey = "5cc45da295ed4917dd7a8f2c"
+    private val apiKey = "4cc45da295ed4917dd7a8f2c"
 
     @OptIn(ExperimentalMaterial3Api::class)
     override fun onCreate(savedInstanceState: Bundle?) {
